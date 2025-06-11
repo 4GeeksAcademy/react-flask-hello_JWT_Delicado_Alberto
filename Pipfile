@@ -18,6 +18,7 @@ cloudinary = "*"
 flask-admin = "*"
 typing-extensions = "*"
 flask-jwt-extended = "==4.6.0"
+werkzeug = "*"
 wtforms = "==3.1.2"
 sqlalchemy = "*"
 
