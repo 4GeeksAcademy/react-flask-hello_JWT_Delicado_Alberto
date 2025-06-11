@@ -1,6 +1,6 @@
 export const initialStore = () => {
     return {
-        token: localStorage.getItem("token") || null,
+        token: sessionStorage.getItem("token") || null,
         user: null,
         message: null,
         todos: [
@@ -21,6 +21,11 @@ export const initialStore = () => {
 export default function storeReducer(store, action = {}) {
     switch (action.type) {
         case "set_token":
+            if (action.payload === null) {
+                sessionStorage.removeItem("token");
+            } else {
+                sessionStorage.setItem("token", action.payload);
+            }
             return {
                 ...store,
                 token: action.payload,

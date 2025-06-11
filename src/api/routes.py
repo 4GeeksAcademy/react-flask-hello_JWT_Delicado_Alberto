@@ -7,11 +7,19 @@ from api.utils import generate_sitemap, APIException
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+from datetime import datetime, timedelta
 
 api = Blueprint('api', __name__)
 
 # Allow CORS requests to this API
-CORS(api)
+CORS(api, resources={
+    r"/api/*": {
+        "origins": ["https://effective-space-telegram-xv9647vg75vhppgr-3000.app.github.dev"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "supports_credentials": True
+    }
+})
 
 @api.route('/signup', methods=['POST'])
 def signup():
@@ -20,12 +28,10 @@ def signup():
     if not body.get("email") or not body.get("password"):
         return jsonify({"error": "Faltan campos requeridos"}), 400
     
-    # Verificar si el usuario ya existe
     user = User.query.filter_by(email=body["email"]).first()
     if user:
         return jsonify({"error": "El usuario ya existe"}), 400
     
-    # Crear nuevo usuario
     hashed_password = generate_password_hash(body["password"])
     new_user = User(
         email=body["email"],
@@ -53,23 +59,40 @@ def login():
     if not user or not check_password_hash(user.password, body["password"]):
         return jsonify({"error": "Credenciales inválidas"}), 401
     
-    # Crear token JWT
-    access_token = create_access_token(identity=user.id)
+    access_token = create_access_token(
+        identity=str(user.id),
+        expires_delta=timedelta(hours=1)
+    )
+    
     return jsonify({
         "access_token": access_token,
-        "user": user.serialize()
+        "user": user.serialize(),
+        "token_type": "Bearer"
     }), 200
 
 @api.route('/validate-token', methods=['GET'])
 @jwt_required()
 def validate_token():
-    current_user_id = get_jwt_identity()
-    user = User.query.get(current_user_id)
+    print("Headers recibidos:")
+    for header, value in request.headers.items():
+        print(f"{header}: {value}")
     
-    if not user:
-        return jsonify({"error": "Usuario no encontrado"}), 404
+    try:
+        current_user_id = get_jwt_identity()
+        print("User ID from token:", current_user_id)
         
-    return jsonify(user.serialize()), 200
+        user = User.query.get(int(current_user_id))
+        if not user:
+            print("Usuario no encontrado en la base de datos")
+            return jsonify({"message": "Usuario no encontrado"}), 404
+            
+        user_data = user.serialize()
+        print("Datos del usuario:", user_data)
+        return jsonify(user_data), 200
+        
+    except Exception as e:
+        print("Error en validate_token:", str(e))
+        return jsonify({"message": str(e)}), 500
 
 @api.route('/hello', methods=['POST', 'GET'])
 def handle_hello():

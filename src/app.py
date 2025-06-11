@@ -24,7 +24,27 @@ app.url_map.strict_slashes = False
 # Configuración JWT
 app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "super-secret-key-change-this")  # Cambiar en producción
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
+app.config["JWT_TOKEN_LOCATION"] = ["headers"]
+app.config["JWT_HEADER_NAME"] = "Authorization"
+app.config["JWT_HEADER_TYPE"] = "Bearer"
+app.config["JWT_ERROR_MESSAGE_KEY"] = "message"
+
 jwt = JWTManager(app)
+
+@jwt.invalid_token_loader
+def invalid_token_callback(error):
+    print("Invalid token error:", error)
+    return jsonify({"message": "Token inválido"}), 422
+
+@jwt.expired_token_loader
+def expired_token_callback(jwt_header, jwt_payload):
+    print("Token expired. Header:", jwt_header, "Payload:", jwt_payload)
+    return jsonify({"message": "El token ha expirado"}), 401
+
+@jwt.unauthorized_loader
+def unauthorized_callback(error):
+    print("Unauthorized error:", error)
+    return jsonify({"message": "No se proporcionó token"}), 401
 
 # database condiguration
 db_url = os.getenv("DATABASE_URL")

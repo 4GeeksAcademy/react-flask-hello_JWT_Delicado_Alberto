@@ -4,11 +4,11 @@ import useGlobalReducer from "../hooks/useGlobalReducer";
 export const Navbar = () => {
 	const { store, dispatch } = useGlobalReducer();
 	const navigate = useNavigate();
-	const isAuthenticated = store.token || localStorage.getItem("token");
+	const isAuthenticated = store.token || sessionStorage.getItem("token");
 
 	const handleLogout = () => {
 		dispatch({ type: "set_token", payload: null });
-		localStorage.removeItem("token");
+		sessionStorage.removeItem("token");
 		navigate("/login");
 	};
 

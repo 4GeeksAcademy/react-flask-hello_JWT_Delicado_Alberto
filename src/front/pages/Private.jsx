@@ -1,38 +1,51 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useGlobalReducer from "../hooks/useGlobalReducer";
 
 export const Private = () => {
     const { store, dispatch } = useGlobalReducer();
     const navigate = useNavigate();
+    const [error, setError] = useState("");
 
     useEffect(() => {
         const validateToken = async () => {
             try {
-                const token = store.token || localStorage.getItem("token");
+                const token = store.token || sessionStorage.getItem("token");
                 if (!token) {
+                    console.log("No token found");
                     navigate("/login");
                     return;
                 }
 
+                console.log("Token being sent:", token);
+
+                const baseUrl = import.meta.env.VITE_BACKEND_URL.replace(/\/$/, '');
                 const response = await fetch(
-                    `${import.meta.env.VITE_BACKEND_URL}/api/validate-token`,
+                    `${baseUrl}/api/validate-token`,
                     {
+                        method: "GET",
                         headers: {
-                            Authorization: `Bearer ${token}`,
-                        },
+                            "Authorization": `Bearer ${token}`,
+                            "Content-Type": "application/json",
+                            "Accept": "application/json"
+                        }
                     }
                 );
 
+                console.log("Response status:", response.status);
+                const data = await response.json();
+                console.log("Response data:", data);
+
                 if (!response.ok) {
-                    throw new Error("Token inválido");
+                    throw new Error(data.message || "Token inválido");
                 }
 
-                const data = await response.json();
                 dispatch({ type: "set_user", payload: data });
+                setError("");
             } catch (error) {
                 console.error("Error validando token:", error);
-                localStorage.removeItem("token");
+                setError(error.message);
+                sessionStorage.removeItem("token");
                 dispatch({ type: "set_token", payload: null });
                 navigate("/login");
             }
@@ -41,8 +54,22 @@ export const Private = () => {
         validateToken();
     }, []);
 
+    if (error) {
+        return (
+            <div className="container mt-5">
+                <div className="alert alert-danger">
+                    Error: {error}
+                </div>
+            </div>
+        );
+    }
+
     if (!store.user) {
-        return <div>Cargando...</div>;
+        return (
+            <div className="container mt-5">
+                <div className="alert alert-info">Cargando...</div>
+            </div>
+        );
     }
 
     return (
